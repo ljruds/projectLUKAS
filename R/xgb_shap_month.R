@@ -1,3 +1,77 @@
+#' Train XGBoost Model and Compute Monthly SHAP Contributions
+#'
+#' This function trains an XGBoost regression model using a cloud fraction as a
+#' response variable ('cf_2_6_mean') and set of covariates, evaluates model performance, and computes
+#' SHAP (SHapley Additive exPlanations) values by month to visualize feature behaviour.
+#'  SHAP values are aggregated by month to assess seasonal variability in feature importance.
+#'
+#' @param response Character string. Name of the response (target) variable,
+#' should be cloud fraction ('cf_2_6_mean') but user has freedom to chose any response from set of covariates in data.
+#' @param covariates Character vector. Names of predictor variables used in the model.
+#' @param filter_expr Optional quoted expression used to filter the dataset
+#'   (e.g., \code{quote(blc_flag \%in\% c(1,2))}). Default is \code{NULL}.
+#' @param test_size Numeric. Proportion of data to use for testing (default = 0.2).
+#' @param seed Integer. Random seed for reproducibility (default = 42).
+#' @param xgb_params List. Parameters passed to \code{xgboost::xgb.train}.
+#'   Defaults include:
+#'   \itemize{
+#'     \item \code{objective = "reg:squarederror"}
+#'     \item \code{eval_metric = "rmse"}
+#'     \item \code{eta = 0.01}
+#'     \item \code{max_depth = 6}
+#'     \item \code{subsample = 0.8}
+#'     \item \code{colsample_bytree = 0.8}
+#'   }
+#' @param nrounds Integer. Number of boosting iterations (default = 1000).
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Loads and preprocesses the dataset \code{arf_daily}, including optional filtering. Preprocessing includes partitioning into months, and filtering for BLC days.
+#'   \item Splits the data into training and testing sets.
+#'   \item Trains an XGBoost regression model.
+#'   \item Evaluates performance using RMSE and R-squared.
+#'   \item Computes SHAP values using \code{SHAPforxgboost}.
+#'   \item Aggregates SHAP values by month to quantify seasonal feature importance.
+#'   \item Produces visualization outputs for performance and SHAP diagnostics.
+#' }
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{model}{Trained XGBoost model object.}
+#'   \item{metrics}{List with RMSE and R-squared values.}
+#'   \item{performance_plot}{\code{ggplot2} scatter plot of observed vs predicted values.}
+#'   \item{shap}{Raw SHAP output from \code{shap.values}.}
+#'   \item{shap_long}{Long-format SHAP data used for plotting.}
+#'   \item{shap_month}{Data frame of monthly aggregated SHAP importance.}
+#'   \item{shap_bar}{Bar plot of mean absolute SHAP values by month.}
+#'   \item{shap_line}{Line plot showing seasonal evolution of SHAP importance.}
+#'   \item{shap_summary}{SHAP summary plot.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' result <- xgb_shap_monthly(
+#'   response = "cloud_fraction",
+#'   covariates = c("temperature", "humidity", "wind_speed"),
+#'   filter_expr = quote(month(date) %in% 6:8)
+#' )
+#'
+#' result$metrics
+#' result$performance_plot
+#' result$shap_bar
+#' }
+#'
+#' @import dplyr
+#' @import lubridate
+#' @import xgboost
+#' @import caret
+#' @import ggplot2
+#' @import SHAPforxgboost
+#'
+#' @export
+
+
 xgb_shap_monthly <- function(
     response,
     covariates,
