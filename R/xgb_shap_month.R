@@ -83,7 +83,7 @@ xgb_shap_monthly <- function(
     covariates,
     use_blc_filter = TRUE,
     blc_values = c(1, 2),
-    months = 4:8,
+    months = 4:10,
     test_size = 0.2,
     seed = 42,
     xgb_params = list(
