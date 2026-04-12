@@ -113,24 +113,24 @@ xgb_shap_monthly <- function(
   data <- arf_daily
   data$date <- as.Date(data$date)
 
-  # Temporal filtering (default April–August)
-  data <- data %>%
-    dplyr::mutate(month_num = lubridate::month(date)) %>%
-    dplyr::filter(month_num %in% months)
+  # --- Apply filters FIRST (like your QMD) ---
 
-  # Optional BLC filtering
+  # Month filter (default April–August)
+  data <- data %>%
+    dplyr::filter(lubridate::month(date) %in% months)
+
+  # Optional BLC filter
   if (use_blc_filter) {
     data <- data %>%
       dplyr::filter(blc_flag %in% blc_values)
   }
 
+  # --- THEN build modeling dataset (clean pipeline) ---
   dat <- data %>%
     dplyr::select(date, dplyr::all_of(response), dplyr::all_of(covariates)) %>%
     stats::na.omit() %>%
     dplyr::mutate(
-      month = lubridate::month(date),
-      month_lab = lubridate::month(date, label = TRUE),
-      doy = lubridate::yday(date)
+      month = lubridate::month(date, label = TRUE)
     )
 
   #---------------------------
