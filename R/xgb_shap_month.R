@@ -189,7 +189,14 @@ xgb_shap_monthly <- function(
     X_train = X
   )
 
-  shap_long$month <- dat$month_lab[shap_long$ID]
+  # Join instead of indexing (this is the fix)
+  shap_long <- shap_long %>%
+    dplyr::left_join(
+      dat[, c("ID", "month")],
+      by = "ID"
+    )
+
+  dat$ID <- seq_len(nrow(dat))
 
   #---------------------------
   # 6. Monthly SHAP (original method)
