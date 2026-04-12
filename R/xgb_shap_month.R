@@ -130,7 +130,8 @@ xgb_shap_monthly <- function(
     dplyr::select(date, dplyr::all_of(response), dplyr::all_of(covariates)) %>%
     stats::na.omit() %>%
     dplyr::mutate(
-      month = lubridate::month(date, label = TRUE)
+      month = lubridate::month(date, label = TRUE),
+      ID = dplyr::row_number()
     )
 
   #---------------------------
