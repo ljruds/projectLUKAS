@@ -200,7 +200,7 @@ xgb_shap_monthly <- function(
   dat$ID <- seq_len(nrow(dat))
 
   #---------------------------
-  # 6. Monthly SHAP (original method)
+  # 6. Monthly shap
   #---------------------------
   shap_month <- shap_long %>%
     group_by(month, variable) %>%
@@ -220,7 +220,7 @@ xgb_shap_monthly <- function(
     theme_minimal()
 
   #---------------------------
-  # 7. NEW: Top-variable monthly SHAP workflow
+  # 7. Shap monthly plots (box and line)
   #---------------------------
   shap_df <- as.data.frame(shap_values$shap_score)
 
@@ -265,7 +265,7 @@ xgb_shap_monthly <- function(
     theme_minimal()
 
   #---------------------------
-  # 8. OPTIONAL: dependence plots
+  # 8.Generating optional dependence plots
   #---------------------------
   shap_dependence <- NULL
 
