@@ -2,6 +2,7 @@
 
 export(get_factors)
 export(xgb_shap_monthly)
+export(xgb_shap_yearly)
 import(SHAPforxgboost)
 import(caret)
 import(dplyr)
