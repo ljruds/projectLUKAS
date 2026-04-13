@@ -66,7 +66,9 @@ It also produces faceted visualizations to compare empirical distributions.
 \details{
 Performs comparative distribution analysis between drought and non-drought periods
 for a set of covariates. The function generates faceted density and boxplots,
-and computes nonparametric statistical tests and effect sizes.
+and computes statistical tests and effect sizes to determine whethere certain
+differences between covariates are significant between drought/nondrought
+cases.
 \subsection{Data Partitioning}{
 
 Observations are classified into two groups:
