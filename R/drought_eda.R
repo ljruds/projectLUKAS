@@ -135,13 +135,13 @@
 #' result$stats
 #' }
 #'
-#' @section Interpretation Guide:
+#' section Interpretation Guide:
 #'
 #' - [Add domain-specific interpretation here]
 #' - [Explain expected behavior of variables during drought]
 #' - [Relate statistical significance to physical mechanisms]
 #'
-#' @section Limitations:
+#' section Limitations:
 #'
 #' - [Discuss sampling biases]
 #' - [Discuss temporal autocorrelation]
