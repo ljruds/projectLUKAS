@@ -113,9 +113,9 @@ xgb_shap_monthly <- function(
   data <- arf_daily
   data$date <- as.Date(data$date)
 
-  # --- Apply filters FIRST (like your QMD) ---
 
-  # Month filter (default April–August)
+
+  # Month filter (default April–August, which is BLC season)
   data <- data %>%
     dplyr::filter(lubridate::month(date) %in% months)
 
@@ -125,7 +125,7 @@ xgb_shap_monthly <- function(
       dplyr::filter(blc_flag %in% blc_values)
   }
 
-  # --- THEN build modeling dataset (clean pipeline) ---
+
   dat <- data %>%
     dplyr::select(date, dplyr::all_of(response), dplyr::all_of(covariates)) %>%
     stats::na.omit() %>%
