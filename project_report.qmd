@@ -1,0 +1,37 @@
+---
+title: "On the Role of Land-Atmosphere Coupling in Boundary Layer Cloud Development Over a Forest in Atlantic Canada"
+author: 
+  - name: "Lukas Rudaitis"
+    affiliation: "Data Analysis STAT 4620/5620 Winter 24-25"
+date: today
+
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    toc: true
+    toc-depth: 2
+    include-in-header: C:/Users/LJRud/OneDrive/Documents/data_analysis/project/finalproject/R/header.tex
+
+bibliography: C:/Users/LJRud/OneDrive/Documents/data_analysis/project/finalproject/R/bib.bib
+---
+\newpage
+\begin{abstract}
+Forests regulate moisture and heat fluxes in the lower atmosphere, which are inextricably linked to fair weather shallow cumulus formation within the lowest level of the atmosphere. Forest-enhanced cloud shading then affects the earth's surface radiation budget, which has been reasonably well studied using computational methods and satellite data. However, there is a lack of surface-based observational studies linking the exchange of energy and matter at the surface to low-level cloud formation. The dataset available combines surface-based flux measurements with ceilometer data, obtained from the Acadia Research Forest monitoring site near Fredericton, NB. These devices have been continuously monitoring lower atmospheric conditions over the forest from 2023-2025, yielding a substantial dataset. (PLACEHOLDER: This is a placeholder abstract. The actual content of the abstract will be developed based on the results and conclusions of the study.)
+\end{abstract}
+
+\newpage
+
+
+# Introduction
+
+## Background
+
+# Data
+
+# Methods
+
+# Results
+
+# Discussion and Conclusion 
+

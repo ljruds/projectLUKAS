@@ -1,0 +1,19 @@
+\usepackage{etoolbox}
+
+\makeatletter
+\patchcmd{\maketitle}
+  {\end{center}}
+  {\end{center}
+   \vspace{1em}
+   \begin{abstract}}
+  {}{}
+
+\patchcmd{\maketitle}
+  {\thispagestyle{plain}}
+  {\end{abstract}
+   \clearpage
+   \tableofcontents
+   \clearpage
+   \thispagestyle{plain}}
+  {}{}
+\makeatother

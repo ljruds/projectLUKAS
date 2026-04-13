@@ -5,14 +5,18 @@
 \title{Train XGBoost Model and Compute Monthly SHAP Contributions}
 \usage{
 xgb_shap_monthly(
-  response,
+  response = "mean_cf_2_6",
   covariates,
-  filter_expr = NULL,
+  use_blc_filter = TRUE,
+  blc_values = c(1, 2),
+  months = 4:10,
   test_size = 0.2,
   seed = 42,
   xgb_params = list(objective = "reg:squarederror", eval_metric = "rmse", eta = 0.01,
     max_depth = 6, subsample = 0.8, colsample_bytree = 0.8),
-  nrounds = 1000
+  nrounds = 1000,
+  produce_plots = FALSE,
+  top_n = 8
 )
 }
 \arguments{
@@ -21,8 +25,14 @@ should be cloud fraction ('cf_2_6_mean') but user has freedom to chose any respo
 
 \item{covariates}{Character vector. Names of predictor variables used in the model.}
 
-\item{filter_expr}{Optional quoted expression used to filter the dataset
-(e.g., \code{quote(blc_flag \%in\% c(1,2))}). Default is \code{NULL}.}
+\item{use_blc_filter}{Logical. Whether to filter data to specific
+boundary layer cloud (BLC) classes (default = TRUE).}
+
+\item{blc_values}{Numeric vector. Values of \code{blc_flag} to retain
+when \code{use_blc_filter = TRUE} (default = c(1, 2)).}
+
+\item{months}{Integer vector. Months to include in the analysis
+(default = 4:8, i.e., April–August).}
 
 \item{test_size}{Numeric. Proportion of data to use for testing (default = 0.2).}
 
