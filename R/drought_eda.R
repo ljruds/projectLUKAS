@@ -1,5 +1,153 @@
 
-
+#' Drought vs Non-Drought Distribution Analysis
+#'
+#' Performs comparative distribution analysis between drought and non-drought periods
+#' for a set of covariates. The function generates faceted density and boxplots,
+#' and computes nonparametric statistical tests and effect sizes.
+#'
+#' @description
+#' This function partitions a dataset into drought and non-drought periods based on
+#' user-defined date thresholds. For each specified covariate, it evaluates whether
+#' the distributions differ between periods using:
+#'
+#' - Wilcoxon rank-sum test (Mann–Whitney U equivalent)
+#' - Kolmogorov–Smirnov test
+#' - Rank-biserial correlation
+#' - Cliff’s Delta
+#'
+#' It also produces faceted visualizations to compare empirical distributions.
+#'
+#' @param data A data.frame containing the dataset.
+#' @param covariates Character vector of variable names to analyze.
+#' @param date_col Name of the date column (default: "date").
+#' @param drought_start Start date of drought period (character or POSIXct).
+#' @param drought_end End date of drought period (character or POSIXct).
+#' @param lower_bound Optional numeric lower bound for variable clipping.
+#' @param upper_bound Optional numeric upper bound for variable clipping.
+#'
+#' @details
+#' ## Data Partitioning
+#' Observations are classified into two groups:
+#'
+#' \deqn{
+#' \text{period} =
+#' \begin{cases}
+#' \text{Drought}, & t \in [t_{start}, t_{end}] \\
+#' \text{Non-drought}, & \text{otherwise}
+#' \end{cases}
+#' }
+#'
+#' ## Statistical Tests
+#'
+#' ### 1. Wilcoxon Rank-Sum Test (Mann–Whitney U)
+#' Tests for differences in central tendency between two independent samples.
+#'
+#' Relationship between reported statistic \eqn{W} and Mann–Whitney \eqn{U}:
+#'
+#' \deqn{
+#' U = W - \frac{n_1(n_1 + 1)}{2}
+#' }
+#'
+#' where:
+#' - \eqn{n_1}: number of drought observations
+#' - \eqn{n_2}: number of non-drought observations
+#'
+#' ### 2. Kolmogorov–Smirnov Test
+#' Measures the maximum difference between empirical cumulative distribution functions:
+#'
+#' \deqn{
+#' D = \sup_x |F_1(x) - F_2(x)|
+#' }
+#'
+#' where:
+#' - \eqn{F_1(x)}, \eqn{F_2(x)} are empirical CDFs
+#'
+#' ## Effect Sizes
+#'
+#' ### 1. Rank-Biserial Correlation
+#'
+#' \deqn{
+#' r = 1 - \frac{2U}{n_1 n_2}
+#' }
+#'
+#' Interpretation:
+#' - \eqn{r \approx 0}: little separation
+#' - \eqn{r > 0}: drought values tend to be larger
+#' - \eqn{r < 0}: non-drought values tend to be larger
+#'
+#' ### 2. Cliff’s Delta
+#'
+#' \deqn{
+#' \delta = P(X > Y) - P(X < Y)
+#' }
+#'
+#' where:
+#' - \eqn{X}: drought sample
+#' - \eqn{Y}: non-drought sample
+#'
+#' Interpretation:
+#' - \eqn{\delta = 0}: no difference
+#' - \eqn{\delta = \pm1}: complete separation
+#'
+#' ## Visualization
+#'
+#' - Kernel density estimates (KDE) are used to approximate probability densities.
+#' - Boxplots summarize median, interquartile range, and dispersion.
+#' - Faceting allows comparison across multiple variables simultaneously.
+#'
+#' ## Notes
+#'
+#' - KDE estimation is sensitive to boundary effects when variables are bounded.
+#' - Optional clipping ensures values lie within physically meaningful limits.
+#'
+#' @return A list with:
+#' \describe{
+#'   \item{plots}{
+#'     \itemize{
+#'       \item density: Faceted density plot
+#'       \item box: Faceted boxplot
+#'     }
+#'   }
+#'   \item{stats}{
+#'     Data frame containing:
+#'     \itemize{
+#'       \item variable name
+#'       \item sample sizes
+#'       \item test statistics
+#'       \item p-values
+#'       \item effect sizes
+#'     }
+#'   }
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' result <- drought_density_analysis(
+#'   data = df,
+#'   covariates = c("mean_cf_2_6", "LCL"),
+#'   drought_start = "2025-08-10",
+#'   drought_end = "2025-09-25",
+#'   lower_bound = 0,
+#'   upper_bound = 1
+#' )
+#'
+#' result$plots$density
+#' result$stats
+#' }
+#'
+#' @section Interpretation Guide:
+#'
+#' - [Add domain-specific interpretation here]
+#' - [Explain expected behavior of variables during drought]
+#' - [Relate statistical significance to physical mechanisms]
+#'
+#' @section Limitations:
+#'
+#' - [Discuss sampling biases]
+#' - [Discuss temporal autocorrelation]
+#' - [Discuss KDE boundary effects if relevant]
+#'
+#' @export
 
 
 
