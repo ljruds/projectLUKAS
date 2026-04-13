@@ -6,7 +6,7 @@
 \usage{
 xgb_shap_yearly(
   data = arf_daily,
-  response,
+  response = "mean_cf_2_6",
   covariates,
   years = c(2023, 2024, 2025),
   start_md = "08-01",

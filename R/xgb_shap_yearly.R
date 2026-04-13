@@ -260,25 +260,32 @@ xgb_shap_yearly <- function(data = arf_daily,
   # 6. Output
   # ---------------------------
   return(list(
+    # --- model + data ---
     model = model,
+
+    data = list(
+      train = train_data,
+      test  = test_data
+    ),
+
+    # --- metrics ---
     metrics = list(
       RMSE = test_rmse,
       MAE  = test_mae,
       R2   = test_r2,
       Bias = test_bias
     ),
-    data = list(train = train_data, test = test_data),
-    plots = list(
-      performance = perf_plot,
-      shap_bar = shap_bar_plot,
-      shap_line = shap_line_plot,
-      shap_summary = shap_summary_plot,
-      shap_dependence = shap_dependence_plots
-    ),
-    shap = list(
-      shap_values = shap_values,
-      shap_long = shap_long,
-      shap_year = shap_year
-    )
+
+    # --- plots ---
+    performance_plot = perf_plot,
+    shap_bar = shap_bar_plot,
+    shap_line = shap_line_plot,
+    shap_summary = shap_summary_plot,
+    shap_dependence = shap_dependence_plots,
+
+    # --- shap outputs ---
+    shap_values = shap_values,
+    shap_long = shap_long,
+    shap_year = shap_year
   ))
 }
