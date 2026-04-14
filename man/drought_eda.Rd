@@ -11,7 +11,8 @@ drought_eda(
   drought_start,
   drought_end,
   lower_bound = NULL,
-  upper_bound = NULL
+  upper_bound = NULL,
+  no_seasonality = FALSE
 )
 }
 \arguments{
@@ -66,7 +67,7 @@ It also produces faceted visualizations to compare empirical distributions.
 \details{
 Performs comparative distribution analysis between drought and non-drought periods
 for a set of covariates. The function generates faceted density and boxplots,
-and computes statistical tests and effect sizes to determine whethere certain
+and computes statistical tests and effect sizes to determine whether certain
 differences between covariates are significant between drought/nondrought
 cases.
 \subsection{Data Partitioning}{
