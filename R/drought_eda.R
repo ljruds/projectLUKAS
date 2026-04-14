@@ -3,7 +3,7 @@
 #'
 #' Performs comparative distribution analysis between drought and non-drought periods
 #' for a set of covariates. The function generates faceted density and boxplots,
-#' and computes statistical tests and effect sizes to determine whethere certain
+#' and computes statistical tests and effect sizes to determine whether certain
 #' differences between covariates are significant between drought/nondrought
 #' cases.
 #'
@@ -159,7 +159,8 @@ drought_eda <- function(data=arf_daily,
                                      drought_start,
                                      drought_end,
                                      lower_bound = NULL,
-                                     upper_bound = NULL) {
+                                     upper_bound = NULL,
+                                     no_seasonality = FALSE) {
 
   library(dplyr)
   library(ggplot2)
@@ -172,12 +173,43 @@ drought_eda <- function(data=arf_daily,
   drought_start <- as.POSIXct(drought_start)
   drought_end   <- as.POSIXct(drought_end)
 
-  # --- Label periods ---
+  # --- Extract components ---
+  drought_year  <- format(drought_start, "%Y")
+  start_md <- format(drought_start, "%m-%d")
+  end_md   <- format(drought_end, "%m-%d")
+
   data <- data %>%
-    mutate(period = ifelse(
-      .data[[date_col]] >= drought_start & .data[[date_col]] <= drought_end,
-      "Drought", "Non-drought"
-    ))
+    mutate(
+      year = format(.data[[date_col]], "%Y"),
+      month_day = format(.data[[date_col]], "%m-%d")
+    )
+
+  # --- Label periods ---
+  if (!no_seasonality) {
+
+    data <- data %>%
+      mutate(period = ifelse(
+        .data[[date_col]] >= drought_start & .data[[date_col]] <= drought_end,
+        "Drought", "Non-drought"
+      ))
+
+  } else {
+
+    data <- data %>%
+      mutate(
+        in_drought = .data[[date_col]] >= drought_start &
+          .data[[date_col]] <= drought_end,
+
+        same_window = month_day >= start_md & month_day <= end_md,
+
+        period = case_when(
+          in_drought ~ "Drought",
+          same_window & year != drought_year ~ "Non-drought",
+          TRUE ~ NA_character_
+        )
+      ) %>%
+      filter(!is.na(period))
+  }
 
   # --- Pivot to long format for faceting ---
   df_long <- data %>%
