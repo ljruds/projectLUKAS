@@ -154,13 +154,16 @@
 
 
 drought_eda <- function(data=arf_daily,
-                                     covariates,
-                                     date_col = "date",
-                                     drought_start,
-                                     drought_end,
-                                     lower_bound = NULL,
-                                     upper_bound = NULL,
-                                     no_seasonality = FALSE) {
+                        covariates,
+                        date_col = "date",
+                        drought_start,
+                        drought_end,
+                        lower_bound = NULL,
+                        upper_bound = NULL,
+                        no_seasonality = FALSE,
+                        blc_filter = FALSE,
+                        blc_col = "blc_flag",
+                        blc_values = c(1, 2)) {
 
   library(dplyr)
   library(ggplot2)
@@ -172,6 +175,17 @@ drought_eda <- function(data=arf_daily,
   data[[date_col]] <- as.POSIXct(data[[date_col]])
   drought_start <- as.POSIXct(drought_start)
   drought_end   <- as.POSIXct(drought_end)
+
+  # --- Optional BLC filter ---
+  if (blc_filter) {
+
+    if (!blc_col %in% names(data)) {
+      stop(paste0("Column '", blc_col, "' not found in data."))
+    }
+
+    data <- data %>%
+      filter(.data[[blc_col]] %in% blc_values)
+  }
 
   # --- Extract components ---
   drought_year  <- format(drought_start, "%Y")
