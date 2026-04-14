@@ -12,7 +12,10 @@ drought_eda(
   drought_end,
   lower_bound = NULL,
   upper_bound = NULL,
-  no_seasonality = FALSE
+  no_seasonality = FALSE,
+  blc_filter = FALSE,
+  blc_col = "blc_flag",
+  blc_values = c(1, 2)
 )
 }
 \arguments{
