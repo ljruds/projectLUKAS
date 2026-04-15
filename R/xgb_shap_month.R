@@ -247,8 +247,7 @@ xgb_shap_monthly <- function(
 
   monthly_long$month <- factor(
     monthly_long$month,
-    levels = 1:12,
-    labels = month.abb
+    levels = month.abb[months]
   )
 
   shap_top_line <- ggplot(monthly_long,
