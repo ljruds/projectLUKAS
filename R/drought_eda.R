@@ -41,6 +41,9 @@
 #'
 #' ## Statistical Tests
 #'
+#' A significance threshold of \eqn{\alpha = 0.05} is used for all hypothesis tests.
+#' Results are considered statistically significant when \eqn{p < \alpha}.
+#'
 #' ### 1. Wilcoxon Rank-Sum Test (Mann–Whitney U)
 #' Tests for differences in central tendency between two independent samples.
 #'
@@ -54,6 +57,9 @@
 #' - \eqn{n_1}: number of drought observations
 #' - \eqn{n_2}: number of non-drought observations
 #'
+#' Decision rule:
+#' - Reject the null hypothesis of equal distributions if \eqn{p < 0.05}.
+#'
 #' ### 2. Kolmogorov–Smirnov Test
 #' Measures the maximum difference between empirical cumulative distribution functions:
 #'
@@ -63,6 +69,9 @@
 #'
 #' where:
 #' - \eqn{F_1(x)}, \eqn{F_2(x)} are empirical CDFs
+#'
+#' Decision rule:
+#' - Reject the null hypothesis of identical distributions if \eqn{p < 0.05}.
 #'
 #' ## Effect Sizes
 #'
@@ -77,6 +86,9 @@
 #' - \eqn{r > 0}: drought values tend to be larger
 #' - \eqn{r < 0}: non-drought values tend to be larger
 #'
+#' Note:
+#' - Effect sizes should be interpreted alongside statistical significance (\eqn{p < 0.05}) to assess practical importance.
+#'
 #' ### 2. Cliff’s Delta
 #'
 #' \deqn{
@@ -90,6 +102,9 @@
 #' Interpretation:
 #' - \eqn{\delta = 0}: no difference
 #' - \eqn{\delta = \pm1}: complete separation
+#'
+#' Note:
+#' - As with other effect sizes, interpret \eqn{\delta} in conjunction with statistical significance (\eqn{p < 0.05}).
 #'
 #' ## Visualization
 #'
