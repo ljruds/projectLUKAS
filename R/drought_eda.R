@@ -83,8 +83,8 @@
 #'
 #' Interpretation:
 #' - \eqn{r \approx 0}: little separation
-#' - \eqn{r > 0}: drought values tend to be larger
-#' - \eqn{r < 0}: non-drought values tend to be larger
+#' - \eqn{r < 0}: drought values tend to be larger
+#' - \eqn{r > 0}: non-drought values tend to be larger
 #'
 #' Note:
 #' - Effect sizes should be interpreted alongside statistical significance (\eqn{p < 0.05}) to assess practical importance.
