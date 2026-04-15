@@ -202,13 +202,22 @@ xgb_shap_yearly <- function(data = arf_daily,
   test_r2   <- 1 - sum((preds_test - y_test)^2) / sum((y_test - mean(y_test))^2)
   test_bias <- mean(preds_test - y_test)
 
-  perf_df <- data.frame(observed = y_test, predicted = preds_test)
+  perf_df <- data.frame(
+    observed = y_test,
+    predicted = preds_test,
+    year = factor(test_data$year)
+  )
 
-  perf_plot <- ggplot(perf_df, aes(observed, predicted)) +
-    geom_point(alpha = 0.5) +
+  perf_plot <- ggplot(perf_df, aes(observed, predicted, color = year)) +
+    geom_point(alpha = 0.6) +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
     theme_minimal() +
-    labs(title = "XGBoost Performance", x = "Observed", y = "Predicted")
+    labs(
+      title = "XGBoost Performance",
+      x = "Observed",
+      y = "Predicted",
+      color = "Year"
+    )
 
   # ---------------------------
   # 5. SHAP
