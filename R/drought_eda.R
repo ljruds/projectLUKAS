@@ -261,6 +261,16 @@ drought_eda <- function(data=arf_daily,
     n1 <- length(drought_vals)
     n2 <- length(nondrought_vals)
 
+    # --- Descriptive statistics ---
+    mean_drought  <- mean(drought_vals, na.rm = TRUE)
+    mean_nondrought <- mean(nondrought_vals, na.rm = TRUE)
+
+    median_drought  <- median(drought_vals, na.rm = TRUE)
+    median_nondrought <- median(nondrought_vals, na.rm = TRUE)
+
+    iqr_drought  <- IQR(drought_vals, na.rm = TRUE)
+    iqr_nondrought <- IQR(nondrought_vals, na.rm = TRUE)
+
     # --- Wilcoxon ---
     w_test <- wilcox.test(drought_vals, nondrought_vals, exact = FALSE)
     W <- as.numeric(w_test$statistic)
@@ -279,6 +289,16 @@ drought_eda <- function(data=arf_daily,
       variable = var_name,
       n_drought = n1,
       n_nondrought = n2,
+
+      # --- Added descriptive stats ---
+      mean_drought = mean_drought,
+      mean_nondrought = mean_nondrought,
+      median_drought = median_drought,
+      median_nondrought = median_nondrought,
+      iqr_drought = iqr_drought,
+      iqr_nondrought = iqr_nondrought,
+
+      # --- Existing inferential stats ---
       U = U,
       p_value_wilcox = w_test$p.value,
       p_value_ks = ks$p.value,
@@ -287,7 +307,6 @@ drought_eda <- function(data=arf_daily,
       cliffs_delta = cliff$estimate
     )
   })
-
   stats_table <- bind_rows(stats_list)
 
   # --- Faceted density plot ---
