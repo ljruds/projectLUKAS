@@ -5,16 +5,23 @@
 \title{Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)}
 \usage{
 fit_cloud_gamm(
-  data = arf_daily,
+  data,
   response = "mean_cf_2_6",
-  covariates,
+  date_var = "date",
+  smooth_vars = c("median_PBLH", "LE_f_daytime_sum", "SW_IN_daytime_sum", "evening_cbh",
+    "LapseRate_850_500_CperKm", "RH_1_7_1_daytime_mean", "G_2_1_1_daytime_sum",
+    "TA_1_2_1_daytime_mean"),
+  linear_vars = c("PA_1_2_1_daytime_mean", "H_f_daytime_sum", "mean_LCL_4_7", "LTS_K",
+    "SWC_3_1_1_daytime_mean", "PW_mm"),
+  k_smooth = 8,
+  k_map = list(median_PBLH = 12),
   months = 4:10,
   blc_values = c(1, 2),
-  k_list = list(median_PBLH = 12, LE_f_daytime_sum = 8, SW_IN_daytime_sum = 8,
-    evening_cbh = 8, LapseRate_850_500_CperKm = 8, RH_1_7_1_daytime_mean = 8,
-    G_2_1_1_daytime_sum = 8, TA_1_2_1_daytime_mean = 8),
-  produce_plots = TRUE,
-  eps = 0.001
+  formula_mixed = NULL,
+  eps = 0.001,
+  family = mgcv::betar(link = "logit"),
+  method = "REML",
+  produce_plots = TRUE
 )
 }
 \arguments{
@@ -22,17 +29,17 @@ fit_cloud_gamm(
 
 \item{response}{Character, response variable (default: "mean_cf_2_6")}
 
-\item{covariates}{Character vector of covariate names}
-
 \item{months}{Integer vector of months to retain (default: 4:10)}
 
 \item{blc_values}{Values of blc_flag to retain (default: c(1,2))}
 
-\item{k_list}{Named list of k values for smooth terms}
+\item{eps}{Small value for beta regression bounds}
 
 \item{produce_plots}{Logical, whether to generate plots}
 
-\item{eps}{Small value for beta regression bounds}
+\item{covariates}{Character vector of covariate names}
+
+\item{k_list}{Named list of k values for smooth terms}
 }
 \value{
 List containing model, summary text, diagnostics, plots
