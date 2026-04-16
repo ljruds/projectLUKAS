@@ -501,5 +501,5 @@ gam.check(mod_intensity)
 plot(mod_intensity, pages = 4)
 concurvity(mod_intensity)
 ```
-### EDA Code
+
 
