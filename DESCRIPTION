@@ -3,9 +3,7 @@ Title: Data Analysis Final Project: Examining Cloud Fraction Interactions with c
 Version: 0.0.0.9000
 Authors@R: 
     person("Lukas", "Rudaitis", , "lukas.rudaitis@dal.ca", role = c("aut", "cre"))
-Description: Required packages:  dplyr, lubridate, xgboost, caret, ggplot2, SHAPforxgboost, tidyr, effsize, purrr, mgcv.
-Contains data "arf_daily" and functions "xgb_shap_monthly()", "xgb_shap_yearly()", "drought_eda()", and "fit_cloud_gamm()".
-
+Description: Required packages:  dplyr, lubridate, xgboost, caret, ggplot2, SHAPforxgboost, tidyr, effsize, purrr, mgcv. Contains data "arf_daily" and functions "xgb_shap_monthly()", "xgb_shap_yearly()", "drought_eda()", and "fit_cloud_gamm()".
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
