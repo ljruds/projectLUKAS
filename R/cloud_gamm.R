@@ -13,7 +13,7 @@
 #' @export
 
 fit_cloud_gamm <- function(
-    data,
+    data = arf_daily,
     response = "mean_cf_2_6",
     covariates,
     months = 4:10,

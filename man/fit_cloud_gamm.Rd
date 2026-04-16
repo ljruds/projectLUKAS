@@ -2,39 +2,41 @@
 % Please edit documentation in R/cloud_gamm.R
 \name{fit_cloud_gamm}
 \alias{fit_cloud_gamm}
-\title{Fit GAMM models for cloud fraction analysis}
+\title{Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)}
 \usage{
 fit_cloud_gamm(
-  data = arf_daily,
+  data,
+  response = "mean_cf_2_6",
   covariates,
-  drought_start = "2025-08-01",
-  drought_end = "2025-09-25",
   months = 4:10,
   blc_values = c(1, 2),
-  k_smooth = 8,
-  make_plots = TRUE
+  k_list = list(median_PBLH = 12, LE_f_daytime_sum = 8, SW_IN_daytime_sum = 8,
+    evening_cbh = 8, LapseRate_850_500_CperKm = 8, RH_1_7_1_daytime_mean = 8,
+    G_2_1_1_daytime_sum = 8, TA_1_2_1_daytime_mean = 8),
+  produce_plots = TRUE,
+  eps = 0.001
 )
 }
 \arguments{
-\item{data}{Data frame containing all variables}
+\item{data}{Data frame containing predictors and response}
+
+\item{response}{Character, response variable (default: "mean_cf_2_6")}
 
 \item{covariates}{Character vector of covariate names}
 
-\item{drought_start}{Start date (YYYY-MM-DD)}
+\item{months}{Integer vector of months to retain (default: 4:10)}
 
-\item{drought_end}{End date (YYYY-MM-DD)}
+\item{blc_values}{Values of blc_flag to retain (default: c(1,2))}
 
-\item{months}{Months to include (default April–October)}
+\item{k_list}{Named list of k values for smooth terms}
 
-\item{blc_values}{Boundary layer cloud flags to retain}
+\item{produce_plots}{Logical, whether to generate plots}
 
-\item{k_smooth}{Default basis dimension for smooths}
-
-\item{make_plots}{Logical; return gratia plots}
+\item{eps}{Small value for beta regression bounds}
 }
 \value{
-List containing models, summaries, diagnostics, and plots
+List containing model, summary text, diagnostics, plots
 }
 \description{
-Fit GAMM models for cloud fraction analysis
+Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)
 }
