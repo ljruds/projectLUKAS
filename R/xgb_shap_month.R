@@ -96,7 +96,9 @@ xgb_shap_monthly <- function(
     ),
     nrounds = 1000,
     produce_plots = FALSE,
-    top_n = 8
+    top_n = 8,
+    drought_start = as.Date("2025-08-01"),
+    drought_end   = as.Date("2025-09-25")
 ) {
 
   library(dplyr)
@@ -133,7 +135,10 @@ xgb_shap_monthly <- function(
       month = lubridate::month(date, label = TRUE),
       ID = dplyr::row_number()
     )
-
+  dat <- dat %>%
+    mutate(
+      drought = date >= drought_start & date <= drought_end
+    )
   #---------------------------
   # 2. Matrix + split
   #---------------------------
@@ -170,11 +175,17 @@ xgb_shap_monthly <- function(
   rmse <- sqrt(mean((preds - y_test)^2))
   r2   <- cor(preds, y_test)^2
 
-  perf_df <- data.frame(observed = y_test, predicted = preds)
+  perf_df <- data.frame(
+    observed  = y_test,
+    predicted = preds,
+    drought   = dat$drought[-train_index]
+  )
 
-  perf_plot <- ggplot(perf_df, aes(observed, predicted)) +
-    geom_point(alpha = 0.5) +
+  perf_plot <- ggplot(perf_df,
+                      aes(observed, predicted, color = drought)) +
+    geom_point(alpha = 0.7) +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
     theme_minimal()
 
   #---------------------------
@@ -190,7 +201,7 @@ xgb_shap_monthly <- function(
     X_train = X
   )
 
-  # Join instead of indexing (this is the fix)
+  # Join
   shap_long <- shap_long %>%
     dplyr::left_join(
       dat[, c("ID", "month")],
