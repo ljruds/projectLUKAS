@@ -174,6 +174,8 @@ xgb_shap_monthly <- function(
 
   rmse <- sqrt(mean((preds - y_test)^2))
   r2   <- cor(preds, y_test)^2
+  test_mae  <- mean(abs(preds - y_test))
+  test_bias <- mean(preds - y_test)
 
   perf_df <- data.frame(
     observed  = y_test,
@@ -304,7 +306,12 @@ xgb_shap_monthly <- function(
   #---------------------------
   return(list(
     model = model,
-    metrics = list(RMSE = rmse, R2 = r2),
+    metrics = list(
+      RMSE = rmse,
+      MAE  = test_mae,
+      R2   = r2,
+      Bias = test_bias
+    ),
     performance_plot = perf_plot,
 
     shap_values = shap_values,
