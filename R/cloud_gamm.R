@@ -1,224 +1,163 @@
-#' Fit GAMM models for cloud fraction analysis
+#' Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)
 #'
-#' @param data Data frame containing all variables
+#' @param data Data frame containing predictors and response
+#' @param response Character, response variable (default: "mean_cf_2_6")
 #' @param covariates Character vector of covariate names
-#' @param drought_start Start date (YYYY-MM-DD)
-#' @param drought_end End date (YYYY-MM-DD)
-#' @param months Months to include (default April–October)
-#' @param blc_values Boundary layer cloud flags to retain
-#' @param k_smooth Default basis dimension for smooths
-#' @param make_plots Logical; return gratia plots
+#' @param months Integer vector of months to retain (default: 4:10)
+#' @param blc_values Values of blc_flag to retain (default: c(1,2))
+#' @param k_list Named list of k values for smooth terms
+#' @param produce_plots Logical, whether to generate plots
+#' @param eps Small value for beta regression bounds
 #'
-#' @return List containing models, summaries, diagnostics, and plots
+#' @return List containing model, summary text, diagnostics, plots
 #' @export
 
 fit_cloud_gamm <- function(
-    data = arf_daily,
+    data,
+    response = "mean_cf_2_6",
     covariates,
-    drought_start = "2025-08-01",
-    drought_end   = "2025-09-25",
     months = 4:10,
     blc_values = c(1, 2),
-    k_smooth = 8,
-    make_plots = TRUE
+    k_list = list(
+      median_PBLH = 12,
+      LE_f_daytime_sum = 8,
+      SW_IN_daytime_sum = 8,
+      evening_cbh = 8,
+      LapseRate_850_500_CperKm = 8,
+      RH_1_7_1_daytime_mean = 8,
+      G_2_1_1_daytime_sum = 8,
+      TA_1_2_1_daytime_mean = 8
+    ),
+    produce_plots = TRUE,
+    eps = 0.001
 ) {
 
-  require(mgcv)
-  require(dplyr)
-  require(lubridate)
-  require(tidyr)
+  requireNamespace("mgcv")
+  requireNamespace("dplyr")
+  requireNamespace("ggplot2")
 
-  if (make_plots) require(gratia)
+  library(mgcv)
+  library(dplyr)
+  library(ggplot2)
 
   #---------------------------
-  # 1. Input checks
+  # 1. Data preprocessing
   #---------------------------
-  required_cols <- c("date", "mean_cf_2_6", "blc_flag", covariates)
-  missing_cols <- setdiff(required_cols, names(data))
+  df <- data
 
-  if (length(missing_cols) > 0) {
-    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  if (!("date" %in% names(df))) {
+    stop("Data must contain a 'date' column.")
   }
 
-  #---------------------------
-  # 2. Preprocessing
-  #---------------------------
-  eps <- 0.001
+  df$date <- as.Date(df$date)
 
-  df <- data %>%
+  df <- df %>%
     mutate(
-      date = as.Date(date),
       month = lubridate::month(date),
-      cloud_beta = pmin(pmax(mean_cf_2_6, eps), 1 - eps),
-      drought = ifelse(
-        date >= as.Date(drought_start) &
-          date <= as.Date(drought_end),
-        "Drought", "Normal"
-      ),
-      drought = as.factor(drought)
+      cloud_beta = pmin(pmax(.data[[response]], eps), 1 - eps)
     ) %>%
     filter(month %in% months) %>%
     filter(blc_flag %in% blc_values) %>%
-    drop_na(all_of(c("cloud_beta", covariates, "month", "drought")))
+    tidyr::drop_na(all_of(c("cloud_beta", covariates, "month")))
 
   #---------------------------
-  # 3. Formulas
+  # 2. Build formula dynamically
   #---------------------------
-  formula_base <- cloud_beta ~
-    s(median_PBLH, k = 12) +
-    s(LE_f_daytime_sum, k = k_smooth) +
-    s(SW_IN_daytime_sum, k = k_smooth) +
-    s(evening_cbh, k = k_smooth) +
-    s(LapseRate_850_500_CperKm, k = k_smooth) +
-    PW_mm +
-    s(RH_1_7_1_daytime_mean, k = k_smooth) +
-    s(G_2_1_1_daytime_sum, k = k_smooth) +
-    s(TA_1_2_1_daytime_mean, k = k_smooth) +
-    PA_1_2_1_daytime_mean +
-    H_f_daytime_sum +
-    mean_LCL_4_7 +
-    LTS_K +
-    SWC_3_1_1_daytime_mean +
-    s(month, bs = "re")
-
-  formula_interaction <- cloud_beta ~
-    drought +
-    s(LE_f_daytime_sum, by = drought, k = k_smooth) +
-    s(G_2_1_1_daytime_sum, by = drought, k = k_smooth) +
-    s(H_f_daytime_sum, by = drought, k = 12) +
-    SWC_3_1_1_daytime_mean * drought +
-    s(median_PBLH, by = drought, k = 12) +
-    s(SW_IN_daytime_sum, k = k_smooth) +
-    s(evening_cbh, k = k_smooth) +
-    s(LapseRate_850_500_CperKm, k = k_smooth) +
-    PW_mm +
-    s(RH_1_7_1_daytime_mean, by = drought, k = k_smooth) +
-    s(TA_1_2_1_daytime_mean, by = drought, k = k_smooth) +
-    PA_1_2_1_daytime_mean +
-    mean_LCL_4_7 +
-    LTS_K +
-    s(month, bs = "re")
-
-  #---------------------------
-  # 4. Fit models
-  #---------------------------
-  mod_base <- gam(formula_base, data = df,
-                  family = betar(link = "logit"), method = "REML")
-
-  mod_interaction <- gam(formula_interaction, data = df,
-                         family = betar(link = "logit"), method = "REML")
-
-  #---------------------------
-  # 5. Summaries
-  #---------------------------
-  capture_summary <- function(model) {
-    paste(capture.output(summary(model)), collapse = "\n")
+  smooth_term <- function(var) {
+    k <- k_list[[var]]
+    if (is.null(k)) k <- 8
+    paste0("s(", var, ", k=", k, ")")
   }
 
-  summaries <- list(
-    base = capture_summary(mod_base),
-    interaction = capture_summary(mod_interaction)
+  smooth_vars <- c(
+    "median_PBLH",
+    "LE_f_daytime_sum",
+    "SW_IN_daytime_sum",
+    "evening_cbh",
+    "LapseRate_850_500_CperKm",
+    "RH_1_7_1_daytime_mean",
+    "G_2_1_1_daytime_sum",
+    "TA_1_2_1_daytime_mean"
   )
 
-  #---------------------------
-  # 6. Diagnostics
-  #---------------------------
-  diagnostics <- list(
-    base = list(
-      gam_check = capture.output(gam.check(mod_base)),
-      concurvity = mgcv::concurvity(mod_base, full = TRUE)
-    ),
-    interaction = list(
-      gam_check = capture.output(gam.check(mod_interaction)),
-      concurvity = mgcv::concurvity(mod_interaction, full = TRUE)
-    )
+  linear_vars <- c(
+    "PW_mm",
+    "PA_1_2_1_daytime_mean",
+    "H_f_daytime_sum",
+    "mean_LCL_4_7",
+    "LTS_K",
+    "SWC_3_1_1_daytime_mean"
   )
 
-  #---------------------------
-  # 7. Model comparison (AIC)
-  #---------------------------
-  aic_vals <- AIC(mod_base, mod_interaction)
-
-  delta_aic <- aic_vals$AIC - min(aic_vals$AIC)
-  weights <- exp(-0.5 * delta_aic) / sum(exp(-0.5 * delta_aic))
-
-  model_comparison <- data.frame(
-    Model = c("Base", "Interaction"),
-    AIC = aic_vals$AIC,
-    Delta_AIC = delta_aic,
-    Weight = weights
+  formula_str <- paste(
+    "cloud_beta ~",
+    paste(c(
+      sapply(smooth_vars, smooth_term),
+      linear_vars,
+      "s(month, bs='re')"
+    ), collapse = " + ")
   )
 
-  #---------------------------
-  # 8. Results table (AUTO)
-  #---------------------------
-  extract_results <- function(model, model_name) {
-
-    s <- summary(model)
-
-    # Parametric
-    param <- as.data.frame(s$p.table)
-    param$term <- rownames(param)
-    param$type <- "parametric"
-
-    # Smooth
-    smooth <- as.data.frame(s$s.table)
-    smooth$term <- rownames(smooth)
-    smooth$type <- "smooth"
-
-    # Harmonize column names
-    names(param) <- c("estimate", "std_error", "stat", "p_value", "term", "type")
-    names(smooth) <- c("edf", "ref_df", "stat", "p_value", "term", "type")
-
-    param$model <- model_name
-    smooth$model <- model_name
-
-    bind_rows(param, smooth)
-  }
-
-  results_table <- bind_rows(
-    extract_results(mod_base, "Base"),
-    extract_results(mod_interaction, "Interaction")
-  ) %>%
-    mutate(
-      significance = case_when(
-        p_value < 0.001 ~ "***",
-        p_value < 0.01  ~ "**",
-        p_value < 0.05  ~ "*",
-        TRUE ~ ""
-      )
-    )
+  formula_mixed <- as.formula(formula_str)
 
   #---------------------------
-  # 9. Plots
+  # 3. Fit model
   #---------------------------
-  plots <- NULL
-
-  if (make_plots) {
-    plots <- list(
-      base = gratia::draw(mod_base),
-      interaction = gratia::draw(mod_interaction),
-      interaction_focus = gratia::draw(
-        mod_interaction,
-        select = "s(H_f_daytime_sum)",
-        partial_match = TRUE
-      )
-    )
-  }
-
-  #---------------------------
-  # 10. Return (S3 object)
-  #---------------------------
-  out <- list(
+  model <- gam(
+    formula_mixed,
     data = df,
-    models = list(base = mod_base, interaction = mod_interaction),
-    summaries = summaries,
-    diagnostics = diagnostics,
-    model_comparison = model_comparison,
-    results_table = results_table,
-    plots = plots
+    family = betar(link = "logit"),
+    method = "REML"
   )
 
-  class(out) <- "cloud_gamm"
-  return(out)
+  #---------------------------
+  # 4. Summary outputs
+  #---------------------------
+  model_summary <- capture.output(summary(model))
+  gam_check <- capture.output(gam.check(model))
+  concurv <- capture.output(concurvity(model, full = TRUE))
+
+  #---------------------------
+  # 5. Plotting
+  #---------------------------
+  plot_list <- NULL
+
+  if (produce_plots) {
+
+    # mgcv base plots → captured as list
+    plot_list <- list()
+
+    pdf(NULL)  # prevent file output
+    plot(model, pages = 1, residuals = TRUE)
+    dev.off()
+
+    # Optional: ggplot partial effects (cleaner)
+    plot_smooth <- function(var) {
+      vis.gam(
+        model,
+        view = var,
+        plot.type = "response",
+        main = paste("Effect of", var)
+      )
+    }
+
+    smooth_plots <- lapply(smooth_vars, function(v) {
+      try(plot_smooth(v), silent = TRUE)
+    })
+
+    plot_list$smooths <- smooth_plots
+  }
+
+  #---------------------------
+  # 6. Return structured object
+  #---------------------------
+  return(list(
+    model = model,
+    formula = formula_mixed,
+    summary = paste(model_summary, collapse = "\n"),
+    gam_check = paste(gam_check, collapse = "\n"),
+    concurvity = paste(concurv, collapse = "\n"),
+    plots = plot_list,
+    data_used = df
+  ))
 }
