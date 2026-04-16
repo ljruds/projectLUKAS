@@ -12,7 +12,7 @@ knitr:
 
 ```{r}
 #| label: setup
-library(finalproject)
+#library(finalproject)
 ```
 
 ##Analysis
@@ -22,7 +22,7 @@ In this section we will show and discuss the code within the R functions used in
 For the yearly analysis we first read the data and assign covariates to be used in the code.
 
 ```{r}
-data<-arf_daily
+data<-read.csv("E:\\Masters\\met_dat\\Master_20250925\\202509_daily_cloud_new.csv")
 response <- "mean_cf_2_6"
 
 covariates <- c(
@@ -209,7 +209,7 @@ rm(list = ls()) #lets clear our global environment for cleanliness
 ```
 The primary difference between the seasonal and yearly XGBoost model is the data preprocessing and filtering. Hence, this is what we will focus on as the model is built in essentially the same way.
 ```{r}
-data<-arf_daily
+data<-read.csv("E:\\Masters\\met_dat\\Master_20250925\\202509_daily_cloud_new.csv")
 response <- "mean_cf_2_6"
 
 covariates <- c(
@@ -421,7 +421,7 @@ ggplot(monthly_long,
 We now pivot to our GAMM code used to complete that part of the anlaysis. I don't have much time so I will be very brief. We first import daata and filter all data
 
 ```{r}
-data<-arf_daily
+data<-read.csv("E:\\Masters\\met_dat\\Master_20250925\\202509_daily_cloud_new.csv")
 covariates <- c(
   "median_PBLH",
   "PA_1_2_1_daytime_mean", "TA_1_2_1_daytime_mean",
