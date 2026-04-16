@@ -5,7 +5,7 @@
 \title{Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)}
 \usage{
 fit_cloud_gamm(
-  data,
+  data = arf_daily,
   response = "mean_cf_2_6",
   covariates,
   months = 4:10,

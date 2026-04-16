@@ -13,109 +13,98 @@
 #' @export
 
 fit_cloud_gamm <- function(
-    data = arf_daily,
+    data,
     response = "mean_cf_2_6",
-    covariates,
+    date_var = "date",
+
+    # Covariate specification
+    smooth_vars = c("median_PBLH", "LE_f_daytime_sum", "SW_IN_daytime_sum",
+                    "evening_cbh", "LapseRate_850_500_CperKm",
+                    "RH_1_7_1_daytime_mean", "G_2_1_1_daytime_sum",
+                    "TA_1_2_1_daytime_mean"),
+
+    linear_vars = c("PA_1_2_1_daytime_mean", "H_f_daytime_sum",
+                    "mean_LCL_4_7", "LTS_K", "SWC_3_1_1_daytime_mean",
+                    "PW_mm"),
+
+    k_smooth = 8,
+    k_map = list(median_PBLH = 12),
+
+    # Filters
     months = 4:10,
     blc_values = c(1, 2),
-    k_list = list(
-      median_PBLH = 12,
-      LE_f_daytime_sum = 8,
-      SW_IN_daytime_sum = 8,
-      evening_cbh = 8,
-      LapseRate_850_500_CperKm = 8,
-      RH_1_7_1_daytime_mean = 8,
-      G_2_1_1_daytime_sum = 8,
-      TA_1_2_1_daytime_mean = 8
-    ),
-    produce_plots = TRUE,
-    eps = 0.001
+
+    # Optional direct formula override
+    formula_mixed = NULL,
+
+    eps = 0.001,
+    family = mgcv::betar(link = "logit"),
+    method = "REML",
+
+    produce_plots = TRUE
 ) {
 
-  requireNamespace("mgcv")
-  requireNamespace("dplyr")
-  requireNamespace("ggplot2")
+  require(mgcv)
+  require(dplyr)
+  require(lubridate)
 
-  library(mgcv)
-  library(dplyr)
-  library(ggplot2)
-
-  #---------------------------
-  # 1. Data preprocessing
-  #---------------------------
   df <- data
 
-  if (!("date" %in% names(df))) {
-    stop("Data must contain a 'date' column.")
-  }
-
-  df$date <- as.Date(df$date)
+  #---------------------------
+  # 1. Preprocessing
+  #---------------------------
+  df[[date_var]] <- as.Date(df[[date_var]])
 
   df <- df %>%
     mutate(
-      month = lubridate::month(date),
+      month = lubridate::month(.data[[date_var]]),
       cloud_beta = pmin(pmax(.data[[response]], eps), 1 - eps)
     ) %>%
     filter(month %in% months) %>%
-    filter(blc_flag %in% blc_values) %>%
-    tidyr::drop_na(all_of(c("cloud_beta", covariates, "month")))
+    filter(blc_flag %in% blc_values)
+
+  # Drop NA
+  all_vars <- unique(c("cloud_beta", smooth_vars, linear_vars, "month"))
+  df <- df %>% tidyr::drop_na(dplyr::all_of(all_vars))
 
   #---------------------------
-  # 2. Build formula dynamically
+  # 2. Build formula
   #---------------------------
-  smooth_term <- function(var) {
-    k <- k_list[[var]]
-    if (is.null(k)) k <- 8
-    paste0("s(", var, ", k=", k, ")")
+  if (is.null(formula_mixed)) {
+
+    smooth_terms <- sapply(smooth_vars, function(v) {
+      k_val <- ifelse(!is.null(k_map[[v]]), k_map[[v]], k_smooth)
+      paste0("s(", v, ", k = ", k_val, ")")
+    })
+
+    formula_str <- paste(
+      "cloud_beta ~",
+      paste(c(
+        smooth_terms,
+        linear_vars,
+        "s(month, bs = 're')"
+      ), collapse = " + ")
+    )
+
+    formula_mixed <- as.formula(formula_str)
   }
-
-  smooth_vars <- c(
-    "median_PBLH",
-    "LE_f_daytime_sum",
-    "SW_IN_daytime_sum",
-    "evening_cbh",
-    "LapseRate_850_500_CperKm",
-    "RH_1_7_1_daytime_mean",
-    "G_2_1_1_daytime_sum",
-    "TA_1_2_1_daytime_mean"
-  )
-
-  linear_vars <- c(
-    "PW_mm",
-    "PA_1_2_1_daytime_mean",
-    "H_f_daytime_sum",
-    "mean_LCL_4_7",
-    "LTS_K",
-    "SWC_3_1_1_daytime_mean"
-  )
-
-  formula_str <- paste(
-    "cloud_beta ~",
-    paste(c(
-      sapply(smooth_vars, smooth_term),
-      linear_vars,
-      "s(month, bs='re')"
-    ), collapse = " + ")
-  )
-
-  formula_mixed <- as.formula(formula_str)
 
   #---------------------------
   # 3. Fit model
   #---------------------------
-  model <- gam(
+  model <- mgcv::gam(
     formula_mixed,
     data = df,
-    family = betar(link = "logit"),
-    method = "REML"
+    family = family,
+    method = method
   )
 
   #---------------------------
-  # 4. Summary outputs
+  # 4. Outputs
   #---------------------------
   model_summary <- capture.output(summary(model))
-  gam_check <- capture.output(gam.check(model))
-  concurv <- capture.output(concurvity(model, full = TRUE))
+  model_check   <- capture.output(gam.check(model))
+  model_concurv <- capture.output(concurvity(model))
 
   #---------------------------
   # 5. Plotting
@@ -124,39 +113,31 @@ fit_cloud_gamm <- function(
 
   if (produce_plots) {
 
-    # mgcv base plots → captured as list
-    plot_list <- list()
+    n_terms <- length(model$smooth)
+    n_pages <- ceiling(n_terms / 4)
 
-    pdf(NULL)  # prevent file output
-    plot(model, pages = 1, residuals = TRUE)
-    dev.off()
+    plot_list <- vector("list", n_pages)
 
-    # Optional: ggplot partial effects (cleaner)
-    plot_smooth <- function(var) {
-      vis.gam(
-        model,
-        view = var,
-        plot.type = "response",
-        main = paste("Effect of", var)
-      )
+    for (i in seq_len(n_pages)) {
+      plot_list[[i]] <- recordPlot({
+        plot(
+          model,
+          pages = 1,
+          select = ((i - 1) * 4 + 1):min(i * 4, n_terms)
+        )
+      })
     }
-
-    smooth_plots <- lapply(smooth_vars, function(v) {
-      try(plot_smooth(v), silent = TRUE)
-    })
-
-    plot_list$smooths <- smooth_plots
   }
 
   #---------------------------
-  # 6. Return structured object
+  # 6. Return object
   #---------------------------
   return(list(
     model = model,
     formula = formula_mixed,
-    summary = paste(model_summary, collapse = "\n"),
-    gam_check = paste(gam_check, collapse = "\n"),
-    concurvity = paste(concurv, collapse = "\n"),
+    summary = model_summary,
+    gam_check = model_check,
+    concurvity = model_concurv,
     plots = plot_list,
     data_used = df
   ))
