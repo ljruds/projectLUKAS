@@ -182,6 +182,7 @@ fit_cloud_gamm <- function(
     summary = summary_str,
     gam_check = gam_check,
     concurvity = conc,
+    plots = plot_list,
     data_used = df
   ))
 }
