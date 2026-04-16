@@ -203,7 +203,7 @@ xgb_shap_monthly <- function(
 
   # Join
   shap_long <- shap_long %>%
-    dplyr::left_join(dat[, c("ID", "month", "Drought")], by = "ID")
+    dplyr::left_join(dat[, c("ID", "month", "drought")], by = "ID")
 
   dat$ID <- seq_len(nrow(dat))
 
