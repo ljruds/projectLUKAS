@@ -13,7 +13,7 @@
 #' @export
 
 fit_cloud_gamm <- function(
-    data,
+    data = arf_daily,
     covariates,
     drought_start = "2025-08-01",
     drought_end   = "2025-09-25",

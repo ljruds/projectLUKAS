@@ -1,5 +1,5 @@
 Package: finalproject
-Title: What the Package Does (One Line, Title Case)
+Title: Data Analysis Final Project: Examining Cloud Fraction INteractions with covariates during a drought period.
 Version: 0.0.0.9000
 Authors@R: 
     person("Lukas", "Rudaitis", , "lukas.rudaitis@dal.ca", role = c("aut", "cre"))
@@ -12,3 +12,7 @@ RoxygenNote: 7.3.3
 Depends: 
     R (>= 3.5)
 LazyData: true
+Suggests: 
+    knitr,
+    quarto
+VignetteBuilder: quarto
