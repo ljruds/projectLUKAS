@@ -112,18 +112,65 @@ fit_cloud_gamm <- function(
   #---------------------------
   # 5. Plotting
   #---------------------------
+  #---------------------------
+  # 5. Diagnostic Plot Generation (individual)
+  #---------------------------
+  plot_list <- list()
+
   if (output_plots) {
 
-    grDevices::pdf(plot_file, width = 10, height = 8)
+    # --- Residuals & fitted ---
+    fitted_vals <- fitted(mod)
+    residuals_dev <- residuals(mod, type = "deviance")
 
-    # --- Smooth terms (4 per page) ---
-    plot(mod, pages = ceiling(length(mod$smooth) / 4), shade = TRUE)
+    # 1. Residuals vs Fitted
+    dev.new()
+    plot(fitted_vals, residuals_dev,
+         xlab = "Fitted values",
+         ylab = "Deviance residuals",
+         main = "Residuals vs Fitted")
+    abline(h = 0, col = "red")
+    plot_list$residuals_vs_fitted <- recordPlot()
+    dev.off()
 
-    # --- Diagnostics ---
-    par(mfrow = c(2, 2))
-    gam.check(mod)
+    # 2. QQ plot
+    dev.new()
+    qqnorm(residuals_dev, main = "Normal Q-Q Plot")
+    qqline(residuals_dev, col = "red")
+    plot_list$qq_plot <- recordPlot()
+    dev.off()
 
-    grDevices::dev.off()
+    # 3. Histogram of residuals
+    dev.new()
+    hist(residuals_dev,
+         main = "Histogram of Residuals",
+         xlab = "Deviance residuals",
+         breaks = 30)
+    plot_list$hist_residuals <- recordPlot()
+    dev.off()
+
+    # 4. Response vs Fitted
+    dev.new()
+    plot(fitted_vals, df$cloud_beta,
+         xlab = "Fitted values",
+         ylab = "Observed",
+         main = "Observed vs Fitted")
+    abline(0, 1, col = "blue")
+    plot_list$obs_vs_fitted <- recordPlot()
+    dev.off()
+
+    # --- Smooth terms (one per plot) ---
+    smooth_plots <- list()
+
+    for (i in seq_along(mod$smooth)) {
+      dev.new()
+      plot(mod, select = i, shade = TRUE,
+           main = paste("Smooth:", mod$smooth[[i]]$term))
+      smooth_plots[[mod$smooth[[i]]$term]] <- recordPlot()
+      dev.off()
+    }
+
+    plot_list$smooths <- smooth_plots
   }
 
   #---------------------------

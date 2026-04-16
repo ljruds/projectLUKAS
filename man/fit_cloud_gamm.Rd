@@ -2,48 +2,54 @@
 % Please edit documentation in R/cloud_gamm.R
 \name{fit_cloud_gamm}
 \alias{fit_cloud_gamm}
-\title{Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)}
+\title{Fit GAMM for cloud fraction with structured outputs}
 \usage{
 fit_cloud_gamm(
   data = arf_daily,
-  response = "mean_cf_2_6",
-  date_var = "date",
+  formula_mixed = NULL,
   smooth_vars = c("median_PBLH", "LE_f_daytime_sum", "SW_IN_daytime_sum", "evening_cbh",
     "LapseRate_850_500_CperKm", "RH_1_7_1_daytime_mean", "G_2_1_1_daytime_sum",
     "TA_1_2_1_daytime_mean"),
   linear_vars = c("PA_1_2_1_daytime_mean", "H_f_daytime_sum", "mean_LCL_4_7", "LTS_K",
-    "SWC_3_1_1_daytime_mean", "PW_mm"),
-  k_smooth = 8,
-  k_map = list(median_PBLH = 12),
-  months = 4:10,
+    "PW_mm", "SWC_3_1_1_daytime_mean"),
+  response = "mean_cf_2_6",
+  date_var = "date",
+  blc_filter = TRUE,
   blc_values = c(1, 2),
-  formula_mixed = NULL,
-  eps = 0.001,
-  family = mgcv::betar(link = "logit"),
-  method = "REML",
-  produce_plots = TRUE
+  months = 4:10,
+  k_list = list(default = 8, median_PBLH = 12),
+  output_plots = TRUE,
+  plot_file = "gamm_output.pdf"
 )
 }
 \arguments{
-\item{data}{Data frame containing predictors and response}
+\item{data}{Data frame}
 
-\item{response}{Character, response variable (default: "mean_cf_2_6")}
+\item{formula_mixed}{Optional full GAM formula}
 
-\item{months}{Integer vector of months to retain (default: 4:10)}
+\item{smooth_vars}{Character vector of smooth terms}
 
-\item{blc_values}{Values of blc_flag to retain (default: c(1,2))}
+\item{linear_vars}{Character vector of linear terms}
 
-\item{eps}{Small value for beta regression bounds}
+\item{response}{Response variable (default: "mean_cf_2_6")}
 
-\item{produce_plots}{Logical, whether to generate plots}
+\item{date_var}{Date column name}
 
-\item{covariates}{Character vector of covariate names}
+\item{blc_filter}{Logical; filter BLC days}
 
-\item{k_list}{Named list of k values for smooth terms}
+\item{blc_values}{Values for BLC filter}
+
+\item{months}{Months to include}
+
+\item{k_list}{Named list of k values for smooths}
+
+\item{output_plots}{Logical}
+
+\item{plot_file}{File path for PDF output}
 }
 \value{
-List containing model, summary text, diagnostics, plots
+List with model, summary, diagnostics, plots
 }
 \description{
-Fit GAMM for Boundary Layer Cloud Fraction (Beta Regression)
+Fit GAMM for cloud fraction with structured outputs
 }
