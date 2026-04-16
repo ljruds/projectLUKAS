@@ -3,7 +3,8 @@ Title: Data Analysis Final Project: Examining Cloud Fraction INteractions with c
 Version: 0.0.0.9000
 Authors@R: 
     person("Lukas", "Rudaitis", , "lukas.rudaitis@dal.ca", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: Required packages:  dplyr, lubridate, xgboost, caret, ggplot2, SHAPforxgboost, tidyr, effsize, purrr, mgcv.
+
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8

@@ -1,0 +1,210 @@
+---
+title: "mixed_model_test"
+format: html
+editor: visual
+---
+
+```{r}
+data<-read.csv("E:\\Masters\\met_dat\\Master_20250925\\202509_daily_cloud_new.csv")
+response <- "mean_cf_2_6"
+
+covariates <- c(
+  "median_PBLH",
+  
+  "PA_1_2_1_daytime_mean",      "TA_1_2_1_daytime_mean",      "LE_f_daytime_sum",           "H_f_daytime_sum", "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",   "PW_mm",  "RH_1_7_1_daytime_mean", "SW_IN_daytime_sum", 'evening_cbh', "G_2_1_1_daytime_sum" )
+```
+
+```{r}
+library(dplyr)
+library(mgcv)     # for GAMs
+library(glmmTMB)  # optional alternative for Beta GLMM
+```
+
+```{r}
+library(mgcv)
+library(dplyr)
+library(lubridate)
+
+covariates <- c(
+  "median_PBLH",
+  "PA_1_2_1_daytime_mean", "TA_1_2_1_daytime_mean",
+  "LE_f_daytime_sum", "H_f_daytime_sum",
+  "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",
+  "PW_mm", "RH_1_7_1_daytime_mean",
+  "SW_IN_daytime_sum", "evening_cbh", "TS_PI_F_1_1_1_daytime_mean", "G_2_1_1_daytime_sum"
+)
+
+df <- data  # replace
+
+eps <- 0.001
+
+df <- df %>%
+  mutate(
+    month = month(date),   # assumes you have a date column
+    cloud_beta = pmin(pmax(mean_cf_2_6, eps), 1 - eps)
+  ) %>%
+  # 1. Keep only April–October
+  filter(month %in% 4:10) %>%
+  # 2. Remove clear-sky days using your condition variable
+  filter(Conditions != 0) %>%
+  drop_na(all_of(c("cloud_beta", covariates, "month")))
+```
+
+```{r}
+covariates <- c(
+  "median_PBLH",
+  "PA_1_2_1_daytime_mean", "TA_1_2_1_daytime_mean",
+  "LE_f_daytime_sum", "H_f_daytime_sum",
+  "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",
+  "PW_mm", "RH_1_7_1_daytime_mean",
+  "SW_IN_daytime_sum", "evening_cbh", "TS_PI_F_1_1_1_daytime_mean", "G_2_1_1_daytime_sum"
+)
+
+df <- data  # replace
+
+eps <- 0.001
+
+df <- df %>%
+  mutate(
+    month = month(date),   # assumes you have a date column
+    cloud_beta = pmin(pmax(mean_cf_2_6, eps), 1 - eps)
+  ) %>%
+  # 1. Keep only April–October
+  filter(month %in% 4:10) %>%
+  
+    # --- 2. Keep ONLY boundary layer cloud days ---
+  filter(blc_flag %in% c(1, 2)) %>%
+  drop_na(all_of(c("cloud_beta", covariates, "month")))
+```
+
+```{r}
+smooth_terms <- paste0("s(", covariates, ", k = 5)", collapse = " + ")
+
+formula_beta <- as.formula(
+  paste(
+    "cloud_beta ~",
+    smooth_terms,
+    "+ s(month, bs = 're')"   # random effect
+  )
+)
+```
+
+```{r}
+formula_mixed <- cloud_beta ~
+  
+  # --- Smooth (nonlinear) ---
+  s(median_PBLH, k = 12) +
+  s(LE_f_daytime_sum, k = 8) +
+  s(SW_IN_daytime_sum, k = 8) +
+  s(evening_cbh, k = 8) +
+  s(LapseRate_850_500_CperKm, k=8) +
+  PW_mm +
+  s( RH_1_7_1_daytime_mean, k=8) +
+  s(G_2_1_1_daytime_sum, k=8) +
+  # --- Linear (parametric) ---
+  #s(TS_PI_F_1_1_1_daytime_mean, k=8) +
+  s(TA_1_2_1_daytime_mean, k=8) +
+  PA_1_2_1_daytime_mean +
+  H_f_daytime_sum +
+  mean_LCL_4_7 +
+  LTS_K +
+  SWC_3_1_1_daytime_mean+ 
+  Conditions
+  
+  
+  # --- Random effect ---
+  s(month, bs = "re")
+```
+
+```{r}
+mod_intensity <- gam(
+  formula_mixed,
+  data = df,
+  family = betar(link = "logit"),
+  method = "REML"
+)
+summary(mod_intensity)
+gam.check(mod_intensity)
+plot(mod_intensity, pages = 4)
+concurvity(mod_intensity)
+```
+
+```{r}
+mod_intensity <- gam(
+  formula_mixed,
+  data = df,
+  family = betar(link = "logit"),
+  method = "REML"
+)
+summary(mod_intensity)
+gam.check(mod_intensity)
+plot(mod_intensity, pages = 4)
+concurvity(mod_intensity)
+```
+
+Now look at drought behaviour
+
+```{r}
+df$drought <- ifelse(df$date >= as.Date("2025-08-01") &
+                     df$date <= as.Date("2025-09-25"), 1, 0)
+df$drought <- as.factor(df$drought)
+```
+
+```{r}
+formula_drought <- cloud_beta ~
+
+  # --- Smooths with drought interaction ---
+  s(median_PBLH, by = drought, k = 12) +
+  s(LE_f_daytime_sum, by = drought, k = 8) +
+  s(SW_IN_daytime_sum, by = drought, k = 8) +
+  s(evening_cbh, by = drought, k = 8) +
+  s(LapseRate_850_500_CperKm, by = drought, k=8) +
+  s(RH_1_7_1_daytime_mean, by = drought, k=8) +
+  s(G_2_1_1_daytime_sum, by = drought, k=8) +
+
+  # --- Linear terms (can also interact if needed) ---
+  PW_mm + 
+  PA_1_2_1_daytime_mean +
+  H_f_daytime_sum +
+  mean_LCL_4_7 +
+  LTS_K +
+  SWC_3_1_1_daytime_mean +
+
+  # --- Drought main effect ---
+  drought +
+
+  # --- Random effect ---
+  s(month, bs = "re")
+```
+
+```{r}
+mod_drought <- gam(
+  formula_drought,
+  data = df,
+  family = betar(link = "logit"),
+  method = "REML"
+)
+summary(mod_drought)
+gam.check(mod_drought)
+plot(mod_drought, pages = 8)
+concurvity(mod_drought)
+```
+
+```{r}
+plot(mod_drought, pages = 8)
+```
+
+```{r}
+mod_base <- gam(formula_mixed, data=df, family=betar, method="REML")
+
+AIC(mod_base, mod_drought)
+anova(mod_base, mod_drought, test="Chisq")
+```
+
+```{r}
+concurvity(mod_drought)
+```
+
+```{r}
+
+```

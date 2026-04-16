@@ -1,0 +1,494 @@
+---
+title: "project_analysis"
+vignette: >
+  %\VignetteIndexEntry{project_analysis}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: '#>'
+---
+
+```{r}
+#| label: setup
+library(finalproject)
+```
+
+##Analysis
+###XGBoost Yearly
+In this section we will show and discuss the code within the R functions used in this project. We begin with the function used to generate statistics and plots for the XGBoost analysis.
+
+For the yearly analysis we first read the data and assign covariates to be used in the code.
+
+```{r}
+data<-arf_daily
+response <- "mean_cf_2_6"
+
+covariates <- c(
+  "median_PBLH",
+  "WS_1_2_1_daytime_mean",
+  "PA_1_2_1_daytime_mean",      "TA_1_2_1_daytime_mean", "SWC_3_1_1_daytime_mean",    "TS_PI_F_1_1_1_daytime_mean", "LE_f_daytime_sum",           "H_f_daytime_sum", "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",   "PW_mm", "G_2_1_1_daytime_sum", "RH_1_7_1_daytime_mean", 'evening_cbh'  )
+```
+
+We then filter the data to only include the drought period (August-September) in all years of study:
+
+```{r}
+data$date <- as.Date(data$date)
+
+dat <- data %>%
+  filter(
+    month(date) %in% c(8,9),
+    day(date) >= ifelse(month(date)==8,1,1),
+    day(date) <= ifelse(month(date)==9,25,31),
+    year(date) %in% c(2023,2024,2025)
+  ) %>%
+  dplyr::select(date, all_of(response), all_of(covariates)) %>%
+  na.omit()
+
+dat$year <- year(dat$date)
+```
+
+We can then build and train the model on the covariates with an 80/20 train/test split, having filtered our data.
+
+```{r}
+X <- as.matrix(dat[, covariates])
+y <- dat[[response]]
+
+set.seed(42)
+
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+
+X_train <- X[train_index, ]
+X_test  <- X[-train_index, ]
+
+y_train <- y[train_index]
+y_test  <- y[-train_index]
+
+dtrain <- xgb.DMatrix(X_train, label = y_train)
+dtest  <- xgb.DMatrix(X_test, label = y_test)
+
+model <- xgb.train(
+  params = list(
+    objective = "reg:squarederror",
+    eval_metric = "rmse",
+    eta = 0.01,
+    max_depth = 6,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+  ),
+  data = dtrain,
+  nrounds = 1000,
+  watchlist = list(train=dtrain,test=dtest),
+  verbose = 0
+)
+preds <- predict(model, X_test)
+
+rmse <- sqrt(mean((preds - y_test)^2))
+r2 <- cor(preds, y_test)^2
+
+cat("RMSE:", rmse,"\n")
+cat("R²:", r2,"\n")
+```
+We then generate a plot to display model performance by plotting actual vs predicted cloud fraction.
+```{r}
+perf_df <- data.frame(observed = y_test, predicted = preds)
+
+ggplot(perf_df, aes(observed, predicted)) +
+  geom_point(alpha=.5) +
+  geom_abline(slope=1, intercept=0, linetype="dashed") +
+  theme_minimal() +
+  labs(
+    title="XGBoost Performance",
+    x="Observed Cloud Fraction",
+    y="Predicted Cloud Fraction"
+  )
+```
+This model actually performs better thant he one used in the main paper body since we don't filter for shallow cumulus days.
+
+We then move to our SHAP analysis to understand drivers.
+
+```{r}
+shap_values <- shap.values( #generate shap vals
+  xgb_model = model,
+  X_train = X
+)
+
+shap_long <- shap.prep(
+  shap_contrib = shap_values$shap_score,
+  X_train = X
+)
+
+shap_long$year <- dat$year[shap_long$ID] #group shap vals by year
+
+library(dplyr)
+library(ggplot2)
+
+shap_year <- shap_long %>%
+  mutate(year_group = ifelse(year %in% c(2023, 2024), "2023–2024", "2025")) %>% #differentiate drought v nd year
+  group_by(year_group, variable) %>%
+  summarise(
+    mean_abs_shap = mean(abs(value)),
+    .groups = "drop"
+  )
+
+ggplot(shap_year,
+       aes(reorder(variable, mean_abs_shap),
+           mean_abs_shap,
+           fill = year_group)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(
+    x = "Feature",
+    y = "Mean |SHAP value|",
+    fill = "Period",
+    title = "Drivers of Cloud Fraction (Aug–Sept)"
+  ) +
+  theme_minimal(base_size = 14) #plot feature importance diffs
+```
+This is slightly different than the plot in our paper but is again due to the fact that in the main body we filter for only ShCu days.
+Below we also replicate our line plot.
+
+```{r}
+shap_year <- shap_long %>%
+  group_by(year, variable) %>%
+  summarise(
+    mean_abs_shap = mean(abs(value)),
+    .groups="drop"
+  )
+ggplot(shap_year,
+       aes(year, mean_abs_shap,
+           color=variable,
+           group=variable)) +
+  geom_line() +
+  geom_point(size=3) +
+  labs(
+    y="Mean |SHAP value|",
+    title="Evolution of Cloud Fraction Drivers by Year"
+  ) +
+  theme_minimal()
+```
+TO obtain our shap summary plot we use the below code:
+
+```{r}
+X <- as.matrix(dat[, covariates])
+
+shap_values <- shap.values(
+  xgb_model = model,
+  X_train = X
+)
+
+shap_long <- shap.prep(
+  shap_contrib = shap_values$shap_score,
+  X_train = X
+)
+shap.plot.summary(shap_long)
+```
+And we can also generate our SHAP dependence plots easily.
+```{r}
+create_shap_dependence <- function(var){
+
+  p <- shap.plot.dependence(
+    data_long = shap_long,
+    x = var,
+    smooth = TRUE
+  )
+
+  print(p)
+}
+shap_plots <- lapply(covariates, create_shap_dependence)
+```
+THese are slightly different but still reflect the trends in our main body.
+
+Lets now examine the body of code used to create our seasonal XGBoost/SHAP analysis!
+
+###XGBoost Seasonal
+
+```{r}
+rm(list = ls()) #lets clear our global environment for cleanliness
+```
+The primary difference between the seasonal and yearly XGBoost model is the data preprocessing and filtering. Hence, this is what we will focus on as the model is built in essentially the same way.
+```{r}
+data<-arf_daily
+response <- "mean_cf_2_6"
+
+covariates <- c(
+  "median_PBLH",
+  "WS_1_2_1_daytime_mean",
+  "PA_1_2_1_daytime_mean",      "TA_1_2_1_daytime_mean", "SWC_3_1_1_daytime_mean",    "TS_PI_F_1_1_1_daytime_mean", "LE_f_daytime_sum",           "H_f_daytime_sum", "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",   "PW_mm", "G_2_1_1_daytime_sum", "RH_1_7_1_daytime_mean", 'evening_cbh'  )
+```
+
+We filter by month and by BLC_flag in this (to only include shallow cumulus days). THe below code only sorts by month, and does not filter. Our function has the capability to filter out months that may not have common BLC.
+```{r}
+data$date <- as.Date(data$date)
+
+dat <- data %>%
+  dplyr::select(date, all_of(response), all_of(covariates)) %>%
+  na.omit() %>%
+  mutate(
+    month = month(date, label = TRUE)
+  )
+
+dat <- data %>%
+  filter(
+    blc_flag %in% c(1,2) #|
+    #(blc_flag == 0 & Conditions == 0)
+  ) %>%
+  dplyr::select(date, all_of(response), all_of(covariates)) %>%
+  na.omit() %>%
+  mutate(
+    month = lubridate::month(date, label = TRUE)
+  )
+```
+
+Initializing and training the model.
+
+```{r}
+library(xgboost)
+library(caret)
+
+X <- as.matrix(dat[, covariates])
+y <- dat[[response]]
+
+set.seed(42)
+
+train_index <- createDataPartition(y, p = 0.8, list = FALSE) #80/20 splot
+
+X_train <- X[train_index, ]
+X_test  <- X[-train_index, ]
+
+y_train <- y[train_index]
+y_test  <- y[-train_index]
+
+dtrain <- xgb.DMatrix(X_train, label = y_train)
+dtest  <- xgb.DMatrix(X_test, label = y_test)
+
+model <- xgb.train( #actually training the model.
+  params = list(
+    objective = "reg:squarederror",
+    eval_metric = "rmse",
+    eta = 0.05,
+    max_depth = 5,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+  ),
+  data = dtrain,
+  nrounds = 1000,
+  watchlist = list(train=dtrain,test=dtest),
+  verbose = 0
+)
+# a few prelim. model statitstics to test performacne
+preds <- predict(model, X_test)
+
+rmse <- sqrt(mean((preds - y_test)^2))
+r2 <- cor(preds, y_test)^2
+
+cat("RMSE:", rmse,"\n")
+cat("R²:", r2,"\n")
+```
+Our R2 is worse than what we have in the paper because this is only a demonstration. We can tune hyperparameters, further filter, and tune covariates to improve performacne. Below we perform our SHAP analysis once again.  
+
+```{r}
+library(SHAPforxgboost)
+#generate shap values
+shap <- shap.values(
+  xgb_model = model,
+  X_train = X
+)
+
+shap_long <- shap.prep(
+  shap_contrib = shap$shap_score,
+  X_train = X
+)
+#sort shap by month
+shap_long$month <- dat$month[shap_long$ID]
+
+```
+
+Below we generate our SHAP summary plot.
+
+```{r}
+X <- as.matrix(dat[, covariates])
+
+shap_values <- shap.values(
+  xgb_model = model,
+  X_train = X
+)
+
+shap_long <- shap.prep(
+  shap_contrib = shap_values$shap_score,
+  X_train = X
+)
+
+shap.plot.summary(shap_long)
+```
+and of course our SHAP dependence plots.
+
+```{r}
+create_shap_dependence <- function(var){
+
+  p <- shap.plot.dependence(
+    data_long = shap_long,
+    x = var,
+    smooth = TRUE
+  )
+
+  print(p)
+}
+shap_plots <- lapply(covariates, create_shap_dependence)
+```
+Now, we generate more specific plots to examine the SHAP values' seasonal cycle.
+
+```{r}
+shap_values <- shap.values(
+  xgb_model = model,
+  X_train = X
+)
+shap_df <- as.data.frame(shap_values$shap_score)
+library(dplyr)
+library(lubridate)
+#sort by date
+shap_df$date <- dat$date
+shap_df$month <- month(dat$date)
+shap_df$doy <- yday(dat$date)
+
+#sort by top shap importances
+top_vars <- names(sort(shap_values$mean_shap_score, decreasing = TRUE))[1:8]
+shap_top <- shap_df[, c("month", top_vars)]
+
+# generate monthly shap values
+
+monthly_shap <- shap_top |>
+  group_by(month) |>
+  summarise(across(all_of(top_vars), mean, na.rm = TRUE))
+```
+
+Below we generate our seasonal cycle boxplot.
+
+```{r}
+library(tidyr)
+
+monthly_long <- monthly_shap |>
+  pivot_longer(
+    cols = -month,
+    names_to = "feature",
+    values_to = "shap_value"
+  )
+
+library(ggplot2)
+monthly_long$month <- factor(
+  monthly_long$month,
+  levels = 1:12,
+  labels = month.abb
+)
+ggplot(monthly_long,
+       aes(x = factor(month), y = shap_value, fill = feature)) +
+  geom_col(position = "stack", width = 0.8) +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Month",
+    y = "Mean SHAP contribution to cloud fraction",
+    fill = "Feature",
+    title = "Monthly SHAP Contributions to Cloud Fraction"
+  )
+```
+and line plot as seen in the paper body. 
+```{r}
+library(ggplot2)
+library(tidyr)
+
+monthly_long <- monthly_shap |>
+  pivot_longer(
+    cols = -month,
+    names_to = "feature",
+    values_to = "shap_value"
+  )
+ggplot(monthly_long,
+       aes(x = month, y = shap_value, colour = feature)) +
+  geom_line(size = 1.2) +
+  geom_point() +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Month",
+    y = "Mean SHAP contribution to cloud fraction",
+    colour = "Feature",
+    title = "Seasonal contribution of predictors to cloud fraction"
+  )
+```
+
+
+### GAMM Code
+We now pivot to our GAMM code used to complete that part of the anlaysis. I don't have much time so I will be very brief. We first import daata and filter all data
+
+```{r}
+data<-arf_daily
+covariates <- c(
+  "median_PBLH",
+  "PA_1_2_1_daytime_mean", "TA_1_2_1_daytime_mean",
+  "LE_f_daytime_sum", "H_f_daytime_sum",
+  "mean_LCL_4_7", "LTS_K", "LapseRate_850_500_CperKm",
+  "PW_mm", "RH_1_7_1_daytime_mean",
+  "SW_IN_daytime_sum", "evening_cbh", "TS_PI_F_1_1_1_daytime_mean", "G_2_1_1_daytime_sum"
+)
+
+df <- data  # replace
+
+eps <- 0.001
+
+df <- df %>%
+  mutate(
+    month = month(date),   # assumes you have a date column
+    cloud_beta = pmin(pmax(mean_cf_2_6, eps), 1 - eps)
+  ) %>%
+  # 1. Keep only April–October
+  filter(month %in% 4:10) %>%
+  
+    # --- 2. Keep ONLY boundary layer cloud days ---
+  filter(blc_flag %in% c(1, 2)) %>%
+  drop_na(all_of(c("cloud_beta", covariates, "month")))
+```
+
+Then identify smooth and fixed terms along with our monthly random effect to create our formula to be modelled by the GAMM.
+
+```{r}
+formula_mixed <- cloud_beta ~
+  
+  # --- Smooth (nonlinear) ---
+  s(median_PBLH, k = 12) +
+  s(LE_f_daytime_sum, k = 8) +
+  s(SW_IN_daytime_sum, k = 8) +
+  s(evening_cbh, k = 8) +
+  s(LapseRate_850_500_CperKm, k=8) +
+  PW_mm +
+  s( RH_1_7_1_daytime_mean, k=8) +
+  s(G_2_1_1_daytime_sum, k=8) +
+  # --- Linear (parametric) ---
+  #s(TS_PI_F_1_1_1_daytime_mean, k=8) +
+  s(TA_1_2_1_daytime_mean, k=8) +
+  #s(WD_1_2_1_daytime_mean, k=8) +
+  PA_1_2_1_daytime_mean +
+  H_f_daytime_sum +
+  mean_LCL_4_7 +
+  LTS_K +
+  SWC_3_1_1_daytime_mean
+  
+  
+  # --- Random effect ---
+  s(month, bs = "re")
+```
+Apply the GAMM and return summary plots and stats.
+
+```{r}
+mod_intensity <- gam(
+  formula_mixed,
+  data = df,
+  family = betar(link = "logit"),
+  method = "REML"
+)
+summary(mod_intensity)
+gam.check(mod_intensity)
+plot(mod_intensity, pages = 4)
+concurvity(mod_intensity)
+```
+### EDA Code
+
