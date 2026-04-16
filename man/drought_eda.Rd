@@ -87,6 +87,9 @@ Observations are classified into two groups:
 }
 
 \subsection{Statistical Tests}{
+
+A significance threshold of \eqn{\alpha = 0.05} is used for all hypothesis tests.
+Results are considered statistically significant when \eqn{p < \alpha}.
 \subsection{1. Wilcoxon Rank-Sum Test (Mann–Whitney U)}{
 
 Tests for differences in central tendency between two independent samples.
@@ -102,6 +105,11 @@ where:
 \item \eqn{n_1}: number of drought observations
 \item \eqn{n_2}: number of non-drought observations
 }
+
+Decision rule:
+\itemize{
+\item Reject the null hypothesis of equal distributions if \eqn{p < 0.05}.
+}
 }
 
 \subsection{2. Kolmogorov–Smirnov Test}{
@@ -115,6 +123,11 @@ D = \sup_x |F_1(x) - F_2(x)|
 where:
 \itemize{
 \item \eqn{F_1(x)}, \eqn{F_2(x)} are empirical CDFs
+}
+
+Decision rule:
+\itemize{
+\item Reject the null hypothesis of identical distributions if \eqn{p < 0.05}.
 }
 }
 
@@ -130,8 +143,13 @@ r = 1 - \frac{2U}{n_1 n_2}
 Interpretation:
 \itemize{
 \item \eqn{r \approx 0}: little separation
-\item \eqn{r > 0}: drought values tend to be larger
-\item \eqn{r < 0}: non-drought values tend to be larger
+\item \eqn{r < 0}: drought values tend to be larger
+\item \eqn{r > 0}: non-drought values tend to be larger
+}
+
+Note:
+\itemize{
+\item Effect sizes should be interpreted alongside statistical significance (\eqn{p < 0.05}) to assess practical importance.
 }
 }
 
@@ -151,6 +169,11 @@ Interpretation:
 \itemize{
 \item \eqn{\delta = 0}: no difference
 \item \eqn{\delta = \pm1}: complete separation
+}
+
+Note:
+\itemize{
+\item As with other effect sizes, interpret \eqn{\delta} in conjunction with statistical significance (\eqn{p < 0.05}).
 }
 }
 

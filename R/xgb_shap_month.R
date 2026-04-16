@@ -203,7 +203,7 @@ xgb_shap_monthly <- function(
 
   # Join
   shap_long <- shap_long %>%
-    dplyr::left_join(dat[, c("ID", "month", "drought")], by = "ID")
+    dplyr::left_join(dat[, c("ID", "month", "Drought")], by = "ID")
 
   dat$ID <- seq_len(nrow(dat))
 
@@ -283,19 +283,16 @@ xgb_shap_monthly <- function(
 
     create_shap_dependence <- function(var) {
 
-      df <- shap_long %>%
-        dplyr::filter(variable == var)
+      p <- shap.plot.dependence(
+        data_long = shap_long,
+        x = var,
+        smooth = TRUE
+      )
 
-      ggplot(df, aes(x = value, y = shap_value, color = drought)) +
-        geom_point(alpha = 0.5) +
-        geom_smooth(method = "loess", se = FALSE) +
-        scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
-        theme_minimal() +
-        labs(
-          x = var,
-          y = "SHAP value",
-          color = "Drought"
-        )
+      # Add drought colouring manually
+      p +
+        aes(color = factor(drought)) +
+        scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red"))
     }
 
     shap_dependence <- lapply(covariates, create_shap_dependence)
