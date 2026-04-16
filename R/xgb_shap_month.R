@@ -283,16 +283,13 @@ xgb_shap_monthly <- function(
 
     create_shap_dependence <- function(var) {
 
-      p <- shap.plot.dependence(
+      shap.plot.dependence(
         data_long = shap_long,
         x = var,
         smooth = TRUE
       )
 
-      # Add drought colouring manually
-      p +
-        aes(color = factor(drought)) +
-        scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red"))
+
     }
 
     shap_dependence <- lapply(covariates, create_shap_dependence)
