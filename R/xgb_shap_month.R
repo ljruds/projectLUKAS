@@ -203,10 +203,7 @@ xgb_shap_monthly <- function(
 
   # Join
   shap_long <- shap_long %>%
-    dplyr::left_join(
-      dat[, c("ID", "month")],
-      by = "ID"
-    )
+    dplyr::left_join(dat[, c("ID", "month", "drought")], by = "ID")
 
   dat$ID <- seq_len(nrow(dat))
 
@@ -277,22 +274,35 @@ xgb_shap_monthly <- function(
   #---------------------------
   # 8.Generating optional dependence plots
   #---------------------------
+  #---------------------------
+  # 8. Generating optional dependence plots (ggplot version)
+  #---------------------------
   shap_dependence <- NULL
 
   if (produce_plots) {
 
     create_shap_dependence <- function(var) {
-      shap.plot.dependence(
-        data_long = shap_long,
-        x = var,
-        smooth = TRUE
-      )
+
+      df <- shap_long %>%
+        dplyr::filter(variable == var)
+
+      ggplot(df, aes(x = value, y = shap_value, color = drought)) +
+        geom_point(alpha = 0.5) +
+        geom_smooth(method = "loess", se = FALSE) +
+        scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+        theme_minimal() +
+        labs(
+          x = var,
+          y = "SHAP value",
+          color = "Drought"
+        )
     }
 
     shap_dependence <- lapply(covariates, create_shap_dependence)
     names(shap_dependence) <- covariates
   }
 
+  # Summary plot (leave as-is or convert later if needed)
   shap_summary <- shap.plot.summary(shap_long)
 
   #---------------------------

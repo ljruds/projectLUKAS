@@ -16,7 +16,9 @@ xgb_shap_monthly(
     max_depth = 6, subsample = 0.8, colsample_bytree = 0.8),
   nrounds = 1000,
   produce_plots = FALSE,
-  top_n = 8
+  top_n = 8,
+  drought_start = as.Date("2025-08-01"),
+  drought_end = as.Date("2025-09-25")
 )
 }
 \arguments{
