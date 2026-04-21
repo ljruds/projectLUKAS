@@ -2,14 +2,15 @@
 #' Drought vs Non-Drought Distribution Analysis
 #'
 #' Performs comparative distribution analysis between drought and non-drought periods
-#' for a set of covariates. The function generates faceted density and boxplots,
-#' and computes statistical tests and effect sizes to determine whether certain
-#' differences between covariates are significant between drought/nondrought
-#' cases.
+#' for a set of covariates. The function generates density and boxplots,
+#' and computes statistical tests and effect sizes to determine whether
+#' differences between covariates are significant between the drought/nondrought
+#' cases identified.
 #'
 #' @description
 #' This function partitions a dataset into drought and non-drought periods based on
-#' user-defined date thresholds. For each specified covariate, it evaluates whether
+#' user-defined date thresholds, with a default August-September 2025.
+#'  For each specified covariate, it evaluates whether
 #' the distributions differ between periods using:
 #'
 #' - Wilcoxon rank-sum test (Mann–Whitney U equivalent)

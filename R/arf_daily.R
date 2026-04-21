@@ -92,7 +92,7 @@
 #' as we are not interested in nighttime data.
 #'
 #' @source
-#' Derived from ceilometer observations and surface meteorological data.
+#' Derived from ceilometer observations and surface meteorological data from the ARF research site.
 #'
 #' @usage data(arf_daily)
 #'

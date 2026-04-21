@@ -104,12 +104,12 @@ formula_mixed <- cloud_beta ~
   # --- Linear (parametric) ---
   #s(TS_PI_F_1_1_1_daytime_mean, k=8) +
   s(TA_1_2_1_daytime_mean, k=8) +
+  #s(WD_1_2_1_daytime_mean, k=8) +
   PA_1_2_1_daytime_mean +
   H_f_daytime_sum +
   mean_LCL_4_7 +
   LTS_K +
-  SWC_3_1_1_daytime_mean+ 
-  Conditions
+  SWC_3_1_1_daytime_mean
   
   
   # --- Random effect ---
@@ -145,36 +145,89 @@ concurvity(mod_intensity)
 Now look at drought behaviour
 
 ```{r}
-df$drought <- ifelse(df$date >= as.Date("2025-08-01") &
-                     df$date <= as.Date("2025-09-25"), 1, 0)
+# Ensure you have a Date column in Date format
+df$date <- as.Date(df$date) # Adjust column name as necessary
+
+# Create the Conditions variable based on your defined period
+df$drought <- ifelse(df$date >= as.Date("2025-08-01") & 
+                        df$date <= as.Date("2025-09-25"), 
+                        "Drought", "Normal")
+
+# CRITICAL: Convert to an unordered factor for mgcv
 df$drought <- as.factor(df$drought)
 ```
 
 ```{r}
-formula_drought <- cloud_beta ~
+# Ensure you have a Date column in Date format
+df$date <- as.Date(df$date) # Adjust column name as necessary
 
-  # --- Smooths with drought interaction ---
-  s(median_PBLH, by = drought, k = 12) +
-  s(LE_f_daytime_sum, by = drought, k = 8) +
-  s(SW_IN_daytime_sum, by = drought, k = 8) +
-  s(evening_cbh, by = drought, k = 8) +
-  s(LapseRate_850_500_CperKm, by = drought, k=8) +
-  s(RH_1_7_1_daytime_mean, by = drought, k=8) +
-  s(G_2_1_1_daytime_sum, by = drought, k=8) +
+# Create the Conditions variable based on your defined period
+df$drought <- ifelse(df$date >= as.Date("2025-08-01") & 
+                        df$date <= as.Date("2025-09-25"), 
+                        "Drought", "Normal")
 
-  # --- Linear terms (can also interact if needed) ---
-  PW_mm + 
+# CRITICAL: Convert to an unordered factor for mgcv
+df$drought <- as.factor(df$drought)
+library(mgcv)
+
+formula_mixed_interaction <- cloud_beta ~
+  # --- MAIN EFFECT OF CONDITION ---
+  # Required as a parametric intercept shift when using 'by' smooths
+  drought + 
+
+  # --- SURFACE PROPERTIES (Interacting with Conditions) ---
+  # Smooth interactions: Fits a separate curve for Drought vs. Normal
+  s(LE_f_daytime_sum, by = drought, k = 8) + 
+  s(G_2_1_1_daytime_sum, by = drought, k = 8) +
+  
+  # Parametric interactions: Fits a separate slope for Drought vs. Normal
+  s(H_f_daytime_sum , by=drought, k = 12) + 
+  SWC_3_1_1_daytime_mean * drought + 
+
+  # --- ATMOSPHERIC DRIVERS (Kept as main effects) ---
+  # (Assuming you want to control for these globally, not split them by drought)
+  s(median_PBLH, by=drought, k = 12) +
+  s(SW_IN_daytime_sum, k = 8) +
+  s(evening_cbh, k = 8) +
+  s(LapseRate_850_500_CperKm, k = 8) +
+  PW_mm +
+  s(RH_1_7_1_daytime_mean, by=drought,k = 8) +
+  s(TA_1_2_1_daytime_mean, by=drought, k = 8) +
   PA_1_2_1_daytime_mean +
-  H_f_daytime_sum +
   mean_LCL_4_7 +
   LTS_K +
-  SWC_3_1_1_daytime_mean +
-
-  # --- Drought main effect ---
-  drought +
-
-  # --- Random effect ---
+  
+  # --- RANDOM EFFECT ---
   s(month, bs = "re")
+
+# Run the updated model
+mod_interaction <- gam(
+  formula_mixed_interaction,
+  data = df,
+  family = betar(link = "logit"),
+  method = "REML"
+)
+summary(mod_interaction)
+gam.check(mod_interaction)
+plot(mod_interaction, pages = 4)
+concurvity(mod_interaction)
+```
+
+```{r}
+summary(mod_interaction)
+gam.check(mod_interaction)
+plot(mod_interaction, pages = 4)
+concurvity(mod_interaction)
+```
+
+```{r}
+library(gratia)
+# This will draw the curves for Normal vs Drought side-by-side
+draw(mod_interaction, select = "s(H_f_daytime_sum)", partial_match = TRUE)
+```
+
+```{r}
+draw(mod_interaction, select = "s(G_2_1_1_daytime_sum)", partial_match = TRUE)
 ```
 
 ```{r}
